@@ -4,26 +4,117 @@ output: html_document
 date: "2024-11-11"
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r}
+library(dplyr)
+library(ggplot2)
+library(reshape2)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+am<-read.csv("CMMmm.csv",as.is=TRUE)
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+pdf("antHist.pdf",width=20,height=16)
+  par(mfrow=c(4,5))
+  cnames<-colnames(am)
+  for (i in 5:23){
+      hist(am[,i],main=cnames[i],xlab="")
+  }
+  dev.off()
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+am.adj <- am
+am.adj$CS <- (am.adj$CL + am.adj$CWB)/2
+
+am.adj <- am.adj %>%
+  mutate(across(where(is.numeric) & !matches("CS"), ~ . / CS))
+```
+
+```{r}
+am$CS <- (am$CL + am$CWB)/2
+am.long <- melt(am, id.vars = "CS", measure.vars = names(am)[5:23])
+
+# Plot using ggplot2 with facet_wrap
+ggplot(am.long, aes(x = CS, y = value)) +
+  geom_point(alpha = 0.6) +
+  facet_wrap(~ variable, scales = "free_y") +
+  labs(x = "CS", y = "Value") +
+  theme_minimal() +
+  theme(
+    strip.text = element_text(size = 8),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+```
+
+```{r}
+am.adj.long <- melt(am.adj, id.vars = "CS", measure.vars = names(am.adj)[5:23])
+
+# Plot using ggplot2 with facet_wrap
+ggplot(am.adj.long, aes(x = CS, y = value)) +
+  geom_point(alpha = 0.6) +
+  facet_wrap(~ variable, scales = "free_y") +
+  labs(x = "CS", y = "Value") +
+  theme_minimal() +
+  theme(
+    strip.text = element_text(size = 8),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+```
+
+```{r}
+am.adj.b <- am.adj %>%
+  filter(sp == "batesii")
+am.adj.b.long <- melt(am.adj.b, id.vars = "CS", measure.vars = names(am.adj.b)[5:23])
+
+# Plot using ggplot2 with facet_wrap
+ggplot(am.adj.b.long, aes(x = CS, y = value)) +
+  geom_point(alpha = 0.6) +
+  facet_wrap(~ variable, scales = "free_y") +
+  labs(x = "CS", y = "Value") +
+  theme_minimal() +
+  theme(
+    strip.text = element_text(size = 8),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+```
+
+```{r}
+am.adj.b <- am.adj %>%
+  filter(sp == "heteroclitus")
+am.adj.b.long <- melt(am.adj.b, id.vars = "CS", measure.vars = names(am.adj.b)[5:23])
+
+# Plot using ggplot2 with facet_wrap
+ggplot(am.adj.b.long, aes(x = CS, y = value)) +
+  geom_point(alpha = 0.6) +
+  facet_wrap(~ variable, scales = "free_y") +
+  labs(x = "CS", y = "Value") +
+  theme_minimal() +
+  theme(
+    strip.text = element_text(size = 8),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+```
+
+```{r}
+am.adj.b <- am.adj %>%
+  filter(sp == "hildebrandti")
+am.adj.b.long <- melt(am.adj.b, id.vars = "CS", measure.vars = names(am.adj.b)[5:23])
+
+# Plot using ggplot2 with facet_wrap
+ggplot(am.adj.b.long, aes(x = CS, y = value)) +
+  geom_point(alpha = 0.6) +
+  facet_wrap(~ variable, scales = "free_y") +
+  labs(x = "CS", y = "Value") +
+  theme_minimal() +
+  theme(
+    strip.text = element_text(size = 8),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+```
