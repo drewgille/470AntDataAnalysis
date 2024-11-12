@@ -1,0 +1,186 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%   Ant Morphometric Data Analysis    %%
+%%             knitr doc               %%
+%% Last Modified  10/29/24 by ESI.     %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{fullpage}
+\usepackage{setspace}
+%\usepackage{comment} 
+\usepackage{rotating}
+\usepackage{color}
+%\usepackage{array}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{bm}
+\usepackage{natbib}
+\usepackage{filecontents}
+\newcommand{\rinline}[1]{Error w/ Knitr}
+\definecolor{red}{rgb}{1.0000000,0.0000000,0.0000000}
+\definecolor{orange}{rgb}{1.0000000,0.6470588,0.0000000}
+\definecolor{green}{rgb}{0.0000000,1.0000000,0.0000000}
+\definecolor{darkgreen}{rgb}{0.0000000,0.3921569,0.0000000}
+\definecolor{lightblue}{rgb}{0.6784314,0.8470588,0.9019608}
+\definecolor{blue}{rgb}{0.0000000,0.0000000,1.0000000}
+\definecolor{navy}{rgb}{0.0000000,0.0000000,0.5000000}
+\definecolor{purple}{rgb}{0.6274510,0.1254902,0.9411765}
+\definecolor{maroon}{rgb}{0.6901961,0.1882353,0.3764706}
+ 
+\title{SCC Ant Morphometric Analysis Script}
+\author{Statistical Consulting Center, Department of Statistical Science, Duke University}
+\date{\today}
+\begin{document}
+%\SweaveOpts{concordance=TRUE}
+\maketitle
+
+\section{Import and Summarize the Data}
+
+
+%% begin.rcode setup,echo=F,messages=F,warnings=F
+%  ## ,results="hide"
+%  rm(list=ls()) ## Completely clear the workspace.
+%  opts_chunk$set(fig.path='./figs/',cache.path='./cache/')
+%  library(xtable)
+%  library(gplots)
+%  library(mclust)
+%% end.rcode
+
+%% begin.rcode input,echo=T
+%  am<-read.csv("CMMmm.csv",as.is=TRUE)
+%  dim(am)
+%  head(am)
+%  apply(is.na(am),2,sum)
+%  table(am$Subsample)
+%% end.rcode
+
+SpecimenCode is unique with one exception.  Is this a coding error?
+
+%% begin.rcode, fig.width=6.5, fig.height=3.5
+%  table(tbl<-table(am$SpecimenCode))
+%  tbl[tbl==2]
+%  ## CASENT0477008 
+%  ##             2 
+%  am[am$SpecimenCode=="CASENT0477008",]
+%  table(table(am$CollectionCode))
+%  table(am$sp)
+%% end.rcode
+
+\section{Graphical EDA}
+
+Plot histograms of the quantitative morphometric measurments:
+
+%% begin.rcode, fig.width=6.5, fig.height=3.5
+%  pdf("antHist.pdf",width=20,height=16)
+%  par(mfrow=c(4,5))
+%  cnames<-colnames(am)
+%  for (i in 5:23){
+%      hist(am[,i],main=cnames[i],xlab="")
+%  }
+%  dev.off()
+%% end.rcode
+
+Plot a simple bi--clustering of the morphometric measurements:
+
+%% begin.rcode, fig.width=6.5, fig.height=8.5
+%  heatmap.2(as.matrix(am[,5:23]),scale="none",trace="none",
+%            main="Morphometric Biclustering")
+%  pdf("antBiClust.pdf",width=10,height=16)
+%  heatmap.2(as.matrix(am[,5:23]),scale="none",trace="none",
+%            main="Morphometric Biclustering")
+%  dev.off()
+%% end.rcode
+
+\section{Basic MClust Analysis}
+
+%% begin.rcode runMclust, cache=TRUE
+%  noNA<-(apply(is.na(am[,5:23]),1,sum)==0)
+%  mc.out<-Mclust(am[noNA,5:23],verbose=FALSE) 
+%% end.rcode
+
+%% begin.rcode,fig.width=6.0, fig.height=6.5
+%  summary(mc.out)
+%  plot(mc.out, what="BIC")
+%% end.rcode
+
+%% begin.rcode pairsMclust, cache=TRUE
+%  pdf("antMClust.pdf",width=40,height=40)
+%  plot(mc.out,what="density",type="hdr")
+%  dev.off()
+%% end.rcode
+
+Agreement between morphological and morphometric designations:
+
+%% begin.rcode,fig.width=4.0, fig.height=4.5
+%  table(mc.out$classification)
+%  tbl<-table(am$sp[noNA],mc.out$classification)
+%  tbl
+%  table(apply(tbl>0,1,sum))
+%  tbl[apply(tbl>0,1,sum)>1,]
+%% end.rcode
+
+\section{PCA}
+
+%% begin.rcode,fig.width=4.0, fig.height=4.5
+%  mstats<-scale(am[noNA,5:23])
+%  m.evs<-eigen(t(mstats)%*%mstats)
+%  plot(m.evs$values/sum(m.evs$values),type="b",
+%       xlab="PC Index",
+%       ylab="Normalized Eigenvalue",
+%       main="Percent Variation Explained",las=1)
+%  m.pcs<-mstats%*%m.evs$vectors
+%  m.cumVar<-cumsum(m.evs$values/sum(m.evs$values))
+%  m.cumVar
+%  pct.var<-round(100*m.evs$values/sum(m.evs$values),2)
+%  pdf("antPCAhist.pdf",width=8.5,height=11)
+%  par(mfrow=c(4,3))
+%  cnames<-colnames(am)
+%  for (i in 1:12){
+%      hist(m.pcs[,i],main=paste0("PC ",i,": Pct Var = ",pct.var[i]),xlab="")
+%  }
+%  dev.off()
+%% end.rcode
+
+
+%% begin.rcode,fig.width=6.0, fig.height=6.5
+%  mcPCA.out<-Mclust(scale(m.pcs[,1:6]),verbose=FALSE)
+%  summary(mcPCA.out)
+%  plot(mcPCA.out, what="BIC")
+%% end.rcode
+
+
+%% begin.rcode,fig.width=4.0, fig.height=4.5
+%  table(mcPCA.out$classification)
+%  tbl<-table(am$sp[noNA],mcPCA.out$classification)
+%  table(apply(tbl>0,1,sum))
+%  tbl[apply(tbl>0,1,sum)>1,]
+%% end.rcode
+
+
+%% begin.rcode,fig.width=4.0, fig.height=4.5
+%% end.rcode
+
+
+
+%% begin.rcode,echo=F,messages=F,warnings=F,results="hide"
+%  gc(); save.image() ## Do garbage collection and save workspace.
+%% end.rcode
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% %%%%%%%                     References                       %%%%%%%
+\bibliographystyle{chicago}
+%% \bibliographystyle{/home/fac/iversen/lib/bibtex/chicago}
+\bibliography{SCC}
+
+\end{document}
+
+
+\begin{figure}[!ht]
+    \begin{center}
+%%                                         trim = left bottom right top
+    \includegraphics[width=6.50in,page=1, trim=0.5in 6.5in 0in 0.650in, clip]{Table3MockUpFinal.pdf}
+    \end{center}
+    \caption{Mock--up of a replacement for Table 3.}
+    \label{fig:mocktable}
+\end{figure}
+
