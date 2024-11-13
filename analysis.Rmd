@@ -15,21 +15,60 @@ am<-read.csv("CMMmm.csv",as.is=TRUE)
 ```
 
 ```{r}
-pdf("antHist.pdf",width=20,height=16)
-  par(mfrow=c(4,5))
-  cnames<-colnames(am)
-  for (i in 5:23){
-      hist(am[,i],main=cnames[i],xlab="")
-  }
-  dev.off()
+#create CS variable & find indices
+am.indices <- am
+am.indices$CS <- (am.indices$CL + am.indices$CWB)/2
+
+am.indices <- am.indices %>%
+  mutate(across(where(is.numeric) & !matches("CS"), ~ . / CS))
 ```
 
 ```{r}
-am.adj <- am
-am.adj$CS <- (am.adj$CL + am.adj$CWB)/2
+#fit regression (Y/CS)~CS for each variable & store coefficients
+coefficient.list <- list()
 
-am.adj <- am.adj %>%
-  mutate(across(where(is.numeric) & !matches("CS"), ~ . / CS))
+for (i in 5:23) {
+  # Fit the regression model
+  model <- lm(am.indices[[i]] ~ am.indices[[24]])
+  
+  #store coefficients
+  model_coeffs <- coef(model)
+  
+  coefficient.list[[colnames(am.indices)[i]]] <- model_coeffs
+
+}  
+
+coefficient.df <- as.data.frame(do.call(rbind, coefficient.list))
+colnames(coefficient.df) <- c("Intercept", "Slope")
+
+coefficient.df
+```
+
+```{r}
+a <- coefficient.df$Slope
+b <- coefficient.df$Intercept
+CS.s <- mean(am.indices$CS)
+
+am.D <- data.frame(matrix(ncol = 19, nrow = 425))
+for (i in 1:19){
+  am.D[i] <- a[i]*am.indices$CS + b[i]
+}
+
+am.C.cal <- data.frame(matrix(ncol = 19, nrow = 1))
+for (i in 1:19){
+  am.C.cal[i] <- a[i]*CS.s + b[i]*CS.s
+}
+```
+
+```{r}
+am.I.css <- data.frame(matrix(ncol = 19, nrow = 425))
+for (i in 1:19){
+  am.I.css[i] <- am.indices[,4+i] / am.D[[i]] * am.C.cal[[i]]
+}
+
+colnames(am.I.css) <- colnames(am.indices)[5:23]
+am.I.css$CS <- am.indices$CS
+colnames(am.I.css) <- c(colnames(am.indices)[5:23], "CS")
 ```
 
 ```{r}
@@ -50,10 +89,10 @@ ggplot(am.long, aes(x = CS, y = value)) +
 ```
 
 ```{r}
-am.adj.long <- melt(am.adj, id.vars = "CS", measure.vars = names(am.adj)[5:23])
+am.indices.long <- melt(am.indices, id.vars = "CS", measure.vars = names(am.indices)[5:23])
 
 # Plot using ggplot2 with facet_wrap
-ggplot(am.adj.long, aes(x = CS, y = value)) +
+ggplot(am.indices.long, aes(x = CS, y = value)) +
   geom_point(alpha = 0.6) +
   facet_wrap(~ variable, scales = "free_y") +
   labs(x = "CS", y = "Value") +
@@ -66,12 +105,12 @@ ggplot(am.adj.long, aes(x = CS, y = value)) +
 ```
 
 ```{r}
-am.adj.b <- am.adj %>%
+am.indices.b <- am.indices %>%
   filter(sp == "batesii")
-am.adj.b.long <- melt(am.adj.b, id.vars = "CS", measure.vars = names(am.adj.b)[5:23])
+am.indices.b.long <- melt(am.indices.b, id.vars = "CS", measure.vars = names(am.indices.b)[5:23])
 
 # Plot using ggplot2 with facet_wrap
-ggplot(am.adj.b.long, aes(x = CS, y = value)) +
+ggplot(am.indices.b.long, aes(x = CS, y = value)) +
   geom_point(alpha = 0.6) +
   facet_wrap(~ variable, scales = "free_y") +
   labs(x = "CS", y = "Value") +
@@ -84,12 +123,12 @@ ggplot(am.adj.b.long, aes(x = CS, y = value)) +
 ```
 
 ```{r}
-am.adj.b <- am.adj %>%
+am.indices.b <- am.indices %>%
   filter(sp == "heteroclitus")
-am.adj.b.long <- melt(am.adj.b, id.vars = "CS", measure.vars = names(am.adj.b)[5:23])
+am.indices.b.long <- melt(am.indices.b, id.vars = "CS", measure.vars = names(am.indices.b)[5:23])
 
 # Plot using ggplot2 with facet_wrap
-ggplot(am.adj.b.long, aes(x = CS, y = value)) +
+ggplot(am.indices.b.long, aes(x = CS, y = value)) +
   geom_point(alpha = 0.6) +
   facet_wrap(~ variable, scales = "free_y") +
   labs(x = "CS", y = "Value") +
@@ -102,12 +141,12 @@ ggplot(am.adj.b.long, aes(x = CS, y = value)) +
 ```
 
 ```{r}
-am.adj.b <- am.adj %>%
+am.indices.b <- am.indices %>%
   filter(sp == "hildebrandti")
-am.adj.b.long <- melt(am.adj.b, id.vars = "CS", measure.vars = names(am.adj.b)[5:23])
+am.indices.b.long <- melt(am.indices.b, id.vars = "CS", measure.vars = names(am.indices.b)[5:23])
 
 # Plot using ggplot2 with facet_wrap
-ggplot(am.adj.b.long, aes(x = CS, y = value)) +
+ggplot(am.indices.b.long, aes(x = CS, y = value)) +
   geom_point(alpha = 0.6) +
   facet_wrap(~ variable, scales = "free_y") +
   labs(x = "CS", y = "Value") +

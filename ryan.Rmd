@@ -1,0 +1,116 @@
+---
+title: "ryan"
+output: html_document
+date: "2024-11-13"
+---
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(stats)
+
+# Load your data if it's not already loaded
+
+# Removing non-numeric columns just for safety as PCA needs numeric data
+am <- am.I.css
+am <- am %>% select_if(is.numeric)
+
+# Remove columns with zero variance (constant columns)
+am <- am %>% select_if(function(x) sd(x, na.rm = TRUE) != 0)
+
+# Handle NA values by removal or imputation
+am <- na.omit(am)  # Simplest approach by removing NA containing rows
+
+# Ensure there are no infinite values
+am <- am %>% mutate_all(~replace(., is.infinite(.), NA)) %>%
+    na.omit()  # Removing rows with Inf values if any
+```
+
+
+```{r}
+# Perform PCA
+pca_result <- prcomp(am, scale. = TRUE)  # scale. = TRUE standardizes the data
+
+# Summary of the PCA results
+summary(pca_result)
+```
+
+
+```{r}
+# Create a Scree plot
+scree_plot <- tibble(
+  Component = 1:length(pca_result$sdev),
+  Variance = pca_result$sdev^2 / sum(pca_result$sdev^2)
+)
+
+ggplot(scree_plot, aes(x = Component, y = Variance)) +
+  geom_line() +
+  geom_point() +
+  theme_minimal() +
+  labs(title = "Scree Plot", x = "Principal Component", y = "Proportion of Variance Explained")
+```
+
+
+```{r}
+# Optionally, view the biplot
+biplot(pca_result)
+```
+
+
+```{r}
+##Middle Plot Used
+# Assuming 'pca_result' is your PCA object from prcomp
+loadings <- pca_result$rotation
+```
+
+
+```{r}
+# Create a data frame for the loadings
+loadings_df <- as.data.frame(loadings[, 1:2])  # Select only the first two PCs
+names(loadings_df) <- c("PC1", "PC2")
+loadings_df$variable <- rownames(loadings)
+
+# Plot using ggplot2
+ggplot(data = loadings_df, aes(x = PC1, y = PC2, label = variable)) +
+  geom_text(aes(label = variable), hjust = 1.2, vjust = 1.2) +
+  geom_segment(aes(x = 0, y = 0, xend = PC1, yend = PC2), arrow = arrow(length = unit(0.2, "cm"))) +
+  theme_minimal() +
+  ggtitle("Biplot of Loadings") +
+  xlab("Principal Component 1") +
+  ylab("Principal Component 2") +
+  xlim(c(-0.38, 0.37)) + ylim(c(-0.3, 0.5)) +  # Adjust limits as necessary
+  theme(text = element_text(size = 12),
+        axis.title = element_text(size = 14),
+        plot.title = element_text(size = 16, face = "bold")) +
+  theme_minimal()
+```
+
+
+```{r}
+##Creating output table
+
+# Assuming pca_result is your PCA object and data is your dataset
+loadings <- pca_result$rotation
+
+# Calculate the absolute loadings to assess impact regardless of direction
+abs_loadings <- abs(loadings)
+
+# Focus on the first few PCs based on the Scree Plot
+significant_pcs <- abs_loadings[, 1:2]  # Adjust the number of PCs as needed
+
+# Sum the absolute loadings across these PCs to get an overall significance score for each variable
+importance_scores <- rowSums(significant_pcs)
+
+# Sort variables by their scores in descending order
+important_vars <- sort(importance_scores, decreasing = TRUE)
+
+# Create a data frame to view the variable names alongside their importance scores
+important_features <- data.frame(Variable = names(important_vars), Importance = important_vars)
+
+# Print the top variables considered most important
+print(head(important_features))
+
+
+
+```
+
